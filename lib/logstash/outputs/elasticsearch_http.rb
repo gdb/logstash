@@ -63,14 +63,28 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
       receive_single(event, index, type)
     else
       receive_bulk(event, index, type)
-    end # 
+    end #
   end # def receive
+
+  def json(event)
+    begin
+      event.to_json
+    rescue StandardError => e
+      @logger.error("Error generating JSON",
+        :error_message => e.message, :error_class => e.class.to_s)
+      JSON.generate({
+          '@error_class' => e.class.to_s,
+          '@error_message' => e.message,
+          '@message' => e.inspect
+        })
+    end
+  end
 
   def receive_single(event, index, type)
     success = false
     while !success
       response = @agent.post!("http://#{@host}:#{@port}/#{index}/#{type}",
-                              :body => event.to_json)
+                              :body => json(event))
       # We must read the body to free up this connection for reuse.
       body = "";
       response.read_body { |chunk| body += chunk }
@@ -90,7 +104,7 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
       header["index"]["_id"] = event.sprintf(@document_id)
     end
     @queue << [
-      header.to_json, event.to_json
+      header.to_json, json(event)
     ].join("\n")
 
     # Keep trying to flush while the queue is full.
