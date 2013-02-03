@@ -71,7 +71,8 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
       event.to_json
     rescue StandardError => e
       @logger.error("Error generating JSON",
-        :error_message => e.message, :error_class => e.class.to_s)
+        :error_message => e.message, :error_class => e.class.to_s,
+        :message => event.message)
       JSON.generate({
           '@error_class' => e.class.to_s,
           '@error_message' => e.message,
@@ -118,7 +119,7 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
     # If we don't tack a trailing newline at the end, elasticsearch
     # doesn't seem to process the last event in this bulk index call.
     #
-    # as documented here: 
+    # as documented here:
     # http://www.elasticsearch.org/guide/reference/api/bulk.html
     #  "NOTE: the final line of data must end with a newline character \n."
     response = @agent.post!("http://#{@host}:#{@port}/_bulk",
@@ -157,7 +158,7 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
       },
       "mappings" => {
         "_default_" => {
-          "_all" => { "enabled" => false } 
+          "_all" => { "enabled" => false }
         }
       }
     } # template_config
