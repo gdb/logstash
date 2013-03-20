@@ -68,22 +68,22 @@ class LogStash::Outputs::ElasticSearchHTTP < LogStash::Outputs::Base
 
   def json(event)
     begin
-      event.to_json
+      return event.to_json
     rescue StandardError => e
-      @logger.error("Error generating JSON",
+      @logger.error("Single error generating JSON",
         :error_message => e.message, :error_class => e.class.to_s)
       event['_logstash_error'] = "#{e.class}: #{e.message}"
 
       event.message = "[INSPECTED] #{event.message.inspect}"
 
       begin
-        event.to_json
+        return event.to_json
       rescue StandardError => e
-        @logger.error("Error generating JSON even after inspecting message",
+        @logger.error("Dobule error generating JSON even after inspecting message",
           :error_message => e.message, :error_class => e.class.to_s,
-          :message => event.message)
+          :discarded_message => event.message)
 
-        JSON.generate({
+        return JSON.generate({
             '@fields._logstash_error' => "[Double-fault] #{e.class.to_s}: #{e.message}",
             '@message' => e.inspect
           })
