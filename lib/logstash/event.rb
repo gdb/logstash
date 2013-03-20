@@ -39,8 +39,27 @@ class LogStash::Event
 
   public
   def self.from_msgpack(msgpack)
-    return LogStash::Event.new(MessagePack.unpack(msgpack))
+    unpacked = MessagePack.unpack(msgpack)
+    transformed = enforce_utf8(unpacked)
+    return LogStash::Event.new(transformed)
   end # def self.from_msgpack
+
+  private
+  def self.enforce_utf8(unpacked)
+    # Poor man's validation
+    begin
+      # Check for valid UTF8
+      unpacked.to_json
+    rescue Encoding::UndefinedConversionError => e
+      {
+        '@message' => "[LOGSTASH] #{e.class}: #{e.message}",
+        '@original_message' => unpacked.inspect,
+        '@_logstash_source' => 'enforce_utf8'
+      }
+    else
+      unpacked
+    end
+  end
 
   public
   def cancel
